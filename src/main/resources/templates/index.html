@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Real Time Messaging</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+<div id="messageArea" class="message-area">
+    <!-- 예시: 서버로부터 초기 메시지 목록을 렌더링 -->
+    <ul>
+        <li th:each="message : ${messages}" th:text="${message}">Sample Message</li>
+    </ul>
+</div>
+<div class="input-area">
+    <input type="textarea" id="messageInput">
+
+</div>
+<script th:inline="javascript">
+    /* 기존 JavaScript 코드 유지 */
+  const socket = new SockJS('/websocket');
+  const stompClient = Stomp.over(socket);
+  let timeout = null; // let으로 선언해야 수정 가능
+
+  stompClient.connect({}, function (frame) {
+      stompClient.subscribe('/topic/public', function (messageOutput) {
+          const messageArea = document.getElementById('messageArea');
+          const messageElement = document.createElement('div');
+          messageElement.classList.add('message-text'); // CSS 클래스 적용
+
+          // 이모지 목록
+          const emojis = ['🐱', '🐶', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🐸', '🐵'];
+          // 랜덤 이모지 선택
+          const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+
+          // 메시지 앞에 랜덤 이모지 추가
+          messageElement.innerHTML = `${randomEmoji} ${messageOutput.body}`;
+          messageArea.appendChild(messageElement); // 메시지 영역에 추가
+      });
+  });
+
+  function sendMessage() {
+      var messageInput = document.getElementById('messageInput');
+      stompClient.send("/app/send", {}, messageInput.value);
+      messageInput.value = ''; // 메시지 전송 후 입력 필드 초기화
+  }
+
+  function debounce(func, wait) {
+      return function() {
+          clearTimeout(timeout);
+          timeout = setTimeout(func, wait);
+      }
+  }
+
+  const debouncedSend = debounce(sendMessage, 1000);
+  document.getElementById('messageInput').addEventListener('input', debouncedSend);
+
+</script>
+
+</body>
+</html>
+
+
+
